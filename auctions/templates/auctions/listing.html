@@ -1,0 +1,209 @@
+{% extends 'auctions/layout.html' %}
+
+{% block body %}
+    {% if message %}
+    <p class="alert alert-primary" role="alert">{{message}}</p>
+    {% endif %}
+    <h2 id="title">{{title}}</h2> 
+    <form action="goto {{title}}" method="post">  
+    {% csrf_token %}
+    <input type="{{typewatchlist}}" id="watchlist-btn" value="{{watchliststatus}}" class="btn btn-primary">
+    </form>
+    
+    <div class="listing-container">
+        <img src="{{listing.image_link}}" alt="No Image Given" width="320px" height="240px"><br>
+        <h6 style="margin-bottom: 20px;">{{listing.description}}</h6>
+        <h2 id="price"></h2>
+        
+    </div>
+    <div class="bid-section">
+            <h5>Highest bid: </h5>
+            <span id="highest-bid"></span>
+    </div>
+    <form action="{{title}}" method="post">
+        {{ bidding_form }}
+        <p id="bid-error-msg"></p>
+        <input type="{{typebid}}" value="Place Bid" id="bid-btn" class="btn btn-primary">
+    </form>
+    <h3>Details</h3>    
+    <ul>
+        <li>Created by: {{detail.owner}}</li>
+        <li>Category: {{detail.category}}</li>
+    </ul>
+
+
+    <form action="{{title}}" method="post">
+        {{ comment_form }} 
+        <br>
+        <input type="{{typecomment}}" value="Post comment" class="btn btn-primary" name="comment" id="comment-btn">
+    </form>
+    <div class="comments-container">
+        <h3>Comments</h3>
+        <div id="fresh-comment-container-id" class="">
+        <p id="fresh-comment-user"></p>
+        <p id="fresh-comment"></p>
+        </div>
+        {% for comment in comments %}
+            <div class="comment-container">
+            <p class="comment-user">{{comment.user__username}} <span class="comment-date">{{comments.date}}</span></p> 
+            <p class="comment">{{comment.comment}}</p>
+            </div>
+        {% endfor %}
+    </div>
+    {% if owns_listing %}
+        <form action="{{title}}" method="post">
+            <input type="button" value="Close Listing" id="close-btn" class="btn btn-danger">
+            <p id="close-btn-success"></p>
+        </form>
+    {% endif %}
+    <script>
+        const csrf_token = '{{csrf_token}}'
+        const currentPrice = '{{listing.price}}'
+        const current_user = '{{request.user}}'
+        try {
+            var highest_bid_user = '{{bid.user}}'
+            var highest_bid_amount = '{{bid.amount__max}}'
+            if (highest_bid_user && highest_bid_amount) {
+            var highest_bid_p = document.getElementById('highest-bid')
+            highest_bid_p.textContent = highest_bid_user + " :  $" + parseInt(highest_bid_amount)
+            }
+        } catch (error) {
+            //skip
+        }
+        console.log(highest_bid_user)
+        console.log(highest_bid_amount)
+        console.log(highest_bid_p)
+        const priceElement = document.getElementById('price')
+        priceElement.textContent = "$" + parseInt(currentPrice) 
+        
+        const watchlistBtn = document.getElementById('watchlist-btn')
+        const title = document.getElementById('title').textContent
+        const bidBtn = document.getElementById('bid-btn')
+        const bidBox = document.getElementById('id_bid')
+
+
+        if (current_user != 'AnonymousUser') {
+            const commentBox = document.getElementById('id_comment')
+            const commentSubmitBtn = document.getElementById('comment-btn')            
+
+            commentSubmitBtn.addEventListener('click', function() {
+                UpdateComments(commentBox.value)
+            })
+        } 
+
+        try { 
+            const closeBtn = document.getElementById('close-btn') 
+        
+            closeBtn.addEventListener('click', function() {
+                closeListing()
+            })
+        } catch (error) {
+            // skip
+        }
+
+        watchlistBtn.addEventListener('click', function() {
+            UpdateWatchlist()
+        })
+
+        bidBtn.addEventListener('click', function() {
+            UpdateBids()
+        })
+
+        async function UpdateWatchlist() {    
+            if (watchlistBtn.value === 'Watchlist') {
+                watchlistBtn.value = 'Watchlisted'
+            } else {
+                watchlistBtn.value = 'Watchlist'
+            }
+            const xhr = new XMLHttpRequest()
+
+            data_nice = {
+                "watchlistStatus": watchlistBtn.value,
+                "title": title,
+            }
+            console.log(data_nice) 
+            xhr.open("POST", `${title}`)
+            xhr.setRequestHeader("X-CSRFToken", csrf_token)
+            xhr.setRequestHeader("Content-Type", "text/plain;chartset=UTF-8");
+            xhr.send(JSON.stringify(["watchlist", data_nice]))
+        }
+
+        async function UpdateBids() {
+            const bidAmount = bidBox.value
+            const bidErrorMsg = document.getElementById('bid-error-msg')
+            bidErrorMsg.textContent = '';
+            if (parseInt(bidAmount) < parseInt(currentPrice)) {
+                const bidErrorMsg = document.getElementById('bid-error-msg')
+                bidErrorMsg.textContent = "The bid must be higher than the current highest bid!"
+                bidErrorMsg.style.color = "red"
+                return;
+            }
+
+            const xhr = new XMLHttpRequest()
+            
+            priceElement.textContent = "$" + parseInt(bidAmount) 
+            highest_bid_p.textContent = current_user + " :  $" + parseInt(bidAmount)
+
+            data_nice = {
+                "bidamount": bidAmount,
+                "title": title,
+            }
+            console.log(data_nice)
+            xhr.open("POST", `${title}`)
+            xhr.setRequestHeader("X-CSRFToken", csrf_token)
+            xhr.setRequestHeader("Content-Type", "text/plain;chartset=UTF-8");
+            await xhr.send(JSON.stringify(["bid", data_nice]))
+        }
+
+        function closeListing() {
+
+            const xhr = new XMLHttpRequest()
+
+            // xhr.onreadystatechange = function () {
+            // if (this.readyState == 4 && this.status == 200) {
+            // console.log(this.responseText)
+            //     }
+            // }
+            if (highest_bid_user === "Bids so far") {
+                highest_bid_user = "no one"
+            } 
+            const successMsg = document.getElementById('close-btn-success')
+            successMsg.textContent = `The listing have been closed and ${highest_bid_user} has been declared the winner`
+            successMsg.style.color = "#4BB543"; 
+
+            data_nice = {
+                "highest_bidder": highest_bid_user,
+                "title": title,
+            }
+            console.log(data_nice)
+            xhr.open("POST", `${title}`)
+            xhr.setRequestHeader("X-CSRFToken", csrf_token)
+            xhr.setRequestHeader("Content-Type", "text/plain;chartset=UTF-8");
+            xhr.send(JSON.stringify(["close", data_nice]))
+        }
+
+        function UpdateComments(comment) {
+            const xhr = new XMLHttpRequest()
+
+            
+            const fresh_comment = document.getElementById('fresh-comment')
+            const fresh_comment_user = document.getElementById('fresh-comment-user')
+            fresh_comment.classList.add('comment')
+            fresh_comment_user.classList.add('comment-user')
+            const fresh_comment_div = document.getElementById('fresh-comment-container-id')
+            fresh_comment_div.classList.add('comment-container')
+            fresh_comment.textContent = comment;
+            fresh_comment_user.textContent = current_user
+            data_nice = {
+                "comment": comment,
+                "title": title,
+            }
+            console.log(data_nice)
+            xhr.open("POST", `${title}`)
+            xhr.setRequestHeader("X-CSRFToken", csrf_token)
+            xhr.setRequestHeader("Content-Type", "text/plain;chartset=UTF-8");
+            xhr.send(JSON.stringify(["comment", data_nice]))
+        }
+
+    </script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'auctions/layout.html' %}
+
+{% block body %}
+    <h2>Listings in {{category}}</h2>
+    <div class="index-contain">
+    {% for listing in categories %}
+        <div class="listing-contain">
+           <a href="{% url 'goto' listing.title %}"><img src="{{listing.image_link}}" alt="No Image Given" width="320px" height="240px"><br></a>
+           <a href="{% url 'goto' listing.title %}"><b>{{listing.title}}</b></a>
+           <p>{{listing.description}}</p>
+           <p>${{listing.price}}</p>
+        
+        </div>
+    {% endfor %}
+    </div>
+{% endblock %}

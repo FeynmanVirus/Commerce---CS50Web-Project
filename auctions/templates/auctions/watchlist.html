@@ -1,0 +1,16 @@
+{% extends 'auctions/layout.html' %}
+
+{% block body %}
+    <h2>{{username}}'s Watchlist</h2>
+    <div class="index-contain">
+    {% for listing in listings %}
+    <div class="listing-contain">
+           <a href="{% url  'goto' listing.listing__title %}"><img src="{{listing.listing__image_link}}" alt="No Image Given" width="320px" height="240px"><br></a>
+           <a href="{% url  'goto' listing.listing__title %}"><b>{{listing.listing__title}}</b></a>
+           <p>{{listing.listing__description}}</p>
+           <p>${{listing.listing__price}}</p>
+        
+    </div>
+    {% endfor %}
+    </div>
+{% endblock %}
